@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"net"
 
 	cli "gopkg.in/urfave/cli.v1"
 )
@@ -20,6 +21,10 @@ type blacklistRecord struct {
 func blacklistAppend(c *cli.Context) {
 	// get variables
 	ip := getIPWithDuplicate(c, "blacklist")
+	// ensure ip is not a range
+	if _, _, err := net.ParseCIDR(ip); err == nil {
+		cliError(c, "Flag: \"ipaddress\" must not be an IP-Range!")
+	}
 	reason := c.String("reason")
 	if reason == "" {
 		cliError(c, "Flag: \"reason\" must not be blank!")
