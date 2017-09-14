@@ -1,12 +1,5 @@
 package goaway2
 
-/*TODO:40 need to allow rules to be flexable according to the mode
-default behaviors:
-	deny/allow inbound
-	deny/allow outbound
-
-flags: +enchancement
-*/
 //TODO:20 might want to add thread in charge of reporting recently blocked/continous attacks (logger thread) +enhancement
 
 import (
