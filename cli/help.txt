@@ -1,0 +1,24 @@
+        \\/////
+        |.   .|     .-""-.--.--.
+       (   _\ |   o ( GO-AWAY! )
+        |  =  | o    '--'--'--'
+        |\___/
+    ___/|   \__
+   /` | '----' |`\      \\\\\\,
+  /   |        |  \    _/''  \\\     Commands:
+ /~%  |   FW   ;   \   \      D         help,   h  - show this help page
+/   /\/        |`\  \   \^   /          rules,  r  - command dealing with all firewall rules
+\  \ |         | /  /   <\  />,_        white,  w  - command dealing with the firewall whitelist
+ `\ \|         |/ /`   / \Y/ /` \\      black,  b  - command dealing with the firewall blacklist
+   `\;         |/`     || #  |  |       dfault, d  - command dealing with all firewall rule defaults
+    (|         |)      || #  |  |
+     |_________|       || #  |  |    Global Flags:
+      |    |  |        ||=[]=|  |      --help          show this help page
+      |____|__|       //| |  /||\      --version, -v   print the current version
+      \    |  |         | |   |
+       |   )  ) Hacker->| |   |       *For more help on individual commands:
+       /   |  |         ( (   |          Command-Help: ./fwcli help [command]
+       |___|__|         | |   |          Subcommand-Help: ./fwcli [command] help [sub-command]
+       \===|==|         | |   |
+       /   `-.`-.       [_[___]
+       \______)__)     (_(____|
