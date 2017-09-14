@@ -1,14 +1,13 @@
 package goaway2
 
-/*TODO:
-need to allow rules to be flexable according to the mode
+/*TODO:40 need to allow rules to be flexable according to the mode
 default behaviors:
 	deny/allow inbound
 	deny/allow outbound
 
 flags: +enchancement
 */
-//TODO: might want to add thread in charge of reporting recently blocked/continous attacks (logger thread) +enhancement
+//TODO:20 might want to add thread in charge of reporting recently blocked/continous attacks (logger thread) +enhancement
 
 import (
 	"log"
@@ -19,10 +18,29 @@ import (
 /***Variables***/
 
 type Firewall struct {
+	// rules for firewall
+	rules    []*fwRule
+	defaults *dfaults
+	// ip-caches
 	blacklist *RedBlackTree
 	whitelist *RedBlackTree
 	neutlist  *RedBlackTree
 }
+
+/***Functions***/
+
+//NewRedBlackTree : create firewall instance and load firewall rules
+func NewFirewall() *Firewall {
+	return &Firewall{
+		rules:     sqlLoadRules(),
+		defaults:  sqlLoadDefaults(),
+		neutlist:  NewRedBlackTree(),
+		blacklist: NewRedBlackTree(),
+		whitelist: NewRedBlackTree(),
+	}
+}
+
+/***Methods***/
 
 //(*Firewall).HandlePackets : packet hander used to block/allow packets based on rules
 func (fw *Firewall) HandlePackets(kv *RBKV, pkt *PacketData) netfilter.Verdict {
@@ -54,6 +72,50 @@ func (fw *Firewall) HandlePackets(kv *RBKV, pkt *PacketData) netfilter.Verdict {
 
 //(*Firewall).checkRules : return verdict based on if packet is following given rules
 func (fw *Firewall) checkRules(pkt *PacketData) netfilter.Verdict {
-	//TODO: need a way of evaluating rules according to rules kept in tables
+	// iterate all rules until either denied or all rules pass
+	for _, rule := range fw.rules {
+		switch pkt.IsInbound() {
+		// if packet is inbound
+		case true:
+			switch fw.defaults.inbound {
+			// if inbound's default is to allow
+			case "allow":
+				// if the rule matches: drop
+				if rule.Validate(pkt) {
+					return netfilter.NF_DROP
+				} else {
+					continue
+				}
+			// if inbound's default is to deny
+			default:
+				// if rule matches: accept
+				if rule.Validate(pkt) {
+					continue
+				} else {
+					return netfilter.NF_DROP
+				}
+			}
+		// if packet is outbound
+		default:
+			switch fw.defaults.outbound {
+			// if outbounds default is to allow
+			case "allow":
+				// if rule matches: deny
+				if rule.Validate(pkt) {
+					return netfilter.NF_DROP
+				} else {
+					continue
+				}
+			// if outbounds deafault is to deny
+			default:
+				// if rule matches: accept
+				if rule.Validate(pkt) {
+					continue
+				} else {
+					return netfilter.NF_DROP
+				}
+			}
+		}
+	}
 	return netfilter.NF_ACCEPT
 }
