@@ -8,7 +8,6 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-//TODO: disallow whitelist/blacklist to use ip-ranges as that is what rules are for +bug
 //TODO: add indexing for rules? +enhancement
 
 /***Varaiables***/
