@@ -69,20 +69,24 @@ func convertIPs(rawips string) strValidator {
 	if _, iprange, err := net.ParseCIDR(rawips); err == nil {
 		return ipRange{*iprange}
 	} else {
-		return ip(net.ParseIP(rawips))
+		return ip(rawips)
 	}
 }
 
 //convertPorts : convert port/port-range to validator for rules
 func convertPorts(rawports string) intValidator {
+	switch {
+	// if ports is any
+	case rawports == "any":
+		return portRange{start: 0, end: 65535}
 	// if ports is port-range and return range
-	if strings.Contains(rawports, "-") {
-		// convert ports to int64 and set to port range validator
+	case strings.Contains(rawports, "-"):
+		// convert port range to ints for port-range validator
 		ports := strings.Split(rawports, "-")
 		start, _ := strconv.ParseInt(ports[0], 10, 64)
 		end, _ := strconv.ParseInt(ports[1], 10, 64)
 		return portRange{start: start, end: end}
-	} else {
+	default:
 		// convert port to int64 and set to single port validator
 		prt, _ := strconv.ParseInt(rawports, 10, 64)
 		return port(prt)
@@ -121,7 +125,14 @@ func (z zone) Validate(srcip string) bool {
 
 //(ip).Validate : match ip-address to other ip-address
 func (a ip) Validate(ip string) bool {
-	return string(a) == ip
+	switch string(a) {
+	case "any":
+		return true
+	case ip:
+		return true
+	default:
+		return false
+	}
 }
 
 //(ipRange).Validate : match ip-range to other ip-address
