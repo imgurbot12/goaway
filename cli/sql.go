@@ -1,6 +1,5 @@
 package cli
 
-/***Varaibles***/
 import (
 	"database/sql"
 	"log"
@@ -9,12 +8,13 @@ import (
 	_ "github.com/mattn/go-sqlite3" //mysql-driver
 )
 
+/***Varaibles***/
 var db *sql.DB
 
 /***Functions***/
 
 //sqlCheckExists : check if given database exists
-func sqlCheckExists(db *sql.DB, table string) bool {
+func sqlCheckExists(table string) bool {
 	rows, err := db.Query("SELECT 1 FROM " + table)
 	if err != nil {
 		return false
@@ -39,19 +39,19 @@ func init() {
 		log.Fatalln(err.Error())
 	}
 	// check if required tables exist
-	if !sqlCheckExists(db, "rules") {
+	if !sqlCheckExists("rules") {
 		log.Println("WARNING - Missing rules table! Creating it...")
 		dot.Exec(db, "create-rules")
 	}
-	if !sqlCheckExists(db, "ruleopts") {
+	if !sqlCheckExists("ruleopts") {
 		log.Println("WARNING - Missing rule-options table! Creating it...")
 		dot.Exec(db, "create-opts")
 	}
-	if !sqlCheckExists(db, "whitelist") {
+	if !sqlCheckExists("whitelist") {
 		log.Println("WARNING - Missing whitelist table! Creating it...")
 		dot.Exec(db, "create-whitelist")
 	}
-	if !sqlCheckExists(db, "blacklist") {
+	if !sqlCheckExists("blacklist") {
 		log.Println("WARNING - Missing blacklist table! Creating it...")
 		dot.Exec(db, "create-blacklist")
 	}
