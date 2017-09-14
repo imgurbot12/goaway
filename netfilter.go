@@ -29,14 +29,6 @@ type NetfilterQueue struct {
 	wg      sync.WaitGroup
 }
 
-type PacketData struct {
-	SrcIP    string
-	DstIP    string
-	SrcPort  int64
-	DstPort  int64
-	Protocol string
-}
-
 /***Methods***/
 
 //(*NetfilterQueue).Start : spawn nfq instance and start collecting packets
