@@ -21,7 +21,7 @@ func sqlLoadRules() (fwRules []*fwRule) {
 	// do sql query
 	rows, err := db.Query("SELECT Zone,FromIP,FromPort,ToIP,ToPort FROM rules ORDER BY RuleNum")
 	if err != nil {
-		fmt.Printf("Unable to collect firewall Rules! SQL-Error: %s", err.Error())
+		fmt.Printf("Unable to collect firewall Rules! SQL-Error: %s\n", err.Error())
 		os.Exit(1)
 	}
 	// fill rules with given data
@@ -43,11 +43,12 @@ func sqlLoadRules() (fwRules []*fwRule) {
 }
 
 //sqlLoadDefaults : load rule options into defaults
-func sqlLoadDefaults() (df *dfaults) {
+func sqlLoadDefaults() *dfaults {
+	df := &dfaults{}
 	// do sql query and scan data
 	err := db.QueryRow("SELECT Inbound, OutBound FROM ruleopts LIMIT 1").Scan(&df.inbound, &df.outbound)
 	if err != nil {
-		fmt.Printf("Unable to collect firewall options! SQL-Error: %s", err.Error())
+		fmt.Printf("Unable to collect firewall options! SQL-Error: %s\n", err.Error())
 		os.Exit(1)
 	}
 	return df
@@ -64,7 +65,8 @@ func checkExists(db *sql.DB, table string) {
 
 func init() {
 	// open database instance
-	db, err := sql.Open("sqlite3", "db/database.db")
+	var err error
+	db, err = sql.Open("sqlite3", "db/database.db")
 	if err != nil {
 		log.Fatalf("Unable to launch SQLITE3: %s\n", err.Error())
 	}
@@ -75,5 +77,4 @@ func init() {
 	checkExists(db, "rules")
 	checkExists(db, "whitelist")
 	checkExists(db, "blacklist")
-	db.Close()
 }
