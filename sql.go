@@ -75,7 +75,5 @@ func init() {
 	checkExists(db, "rules")
 	checkExists(db, "whitelist")
 	checkExists(db, "blacklist")
-	// load fw rules from sql table
-	sqlLoadRules()
 	db.Close()
 }
