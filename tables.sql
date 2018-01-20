@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS whitelist (
   EntryDate TEXT NOT NULL,
   Reason TEXT NOT NULL,
   LogicalDelete INT NOT NULL
-);s
+);
 CREATE INDEX IF NOT EXISTS whitelist_1 ON whitelist (LogicalDelete, IPAddress);
 COMMIT;
 
