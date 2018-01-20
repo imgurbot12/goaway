@@ -40,7 +40,27 @@ func (q *NetFilterQueue) start() {
 	if err != nil {
 		log.Fatalf("NFQueue %d Error: %s\n", q.QueueNum, err.Error())
 	}
-	log.Printf("NFQueue: %d Initialized! Starting WorkerPool...\n", q.QueueNum)
+	log.Printf(`
+
+   |\                     /)
+ /\_\\__               (_//
+|   '>\-'     _._       //')
+ \ /' \\  _.-':::'-._  //
+  '    \|'    :::    '|/  _____          ___                          
+        |     :::     |  |  __ \        / _ \                         
+        |.....:::.....|  | |  \/  ___  / /_\ \__      __  __ _  _   _ 
+        |:::::::::::::|  | | __  / _ \ |  _  |\ \ /\ / / / _' || | | |
+        |     :::     |  | |_\ \| (_) || | | | \ V  V / | (_| || |_| |
+        \     :::     /   \____/ \___/ \_| |_/  \_/\_/   \__,_| \__, | 
+         \    :::    /                                           __/ |
+          '-. ::: .-'                                           |___/ 
+           //':::'\\
+          //   '   \\
+         |/         \\
+
+`)
+	log.Printf("NFQueue: %d, Initalized!", q.QueueNum)
+	log.Printf("Workers Starting... DONE!")
 	// set packet queue and started boolean
 	q.pktQueue = q.nfq.GetPackets()
 	// spawn workerpool
