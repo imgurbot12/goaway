@@ -26,7 +26,7 @@ func sqlCheckExists(table string) bool {
 func init() {
 	// open database instance
 	var err error
-	db, err = sql.Open("sqlite3", "db/database.db")
+	db, err = sql.Open("sqlite3", "goaway2/db/database.db")
 	if err != nil {
 		log.Fatalf("Unable to launch SQLITE3: %s\n", err.Error())
 	}
@@ -34,9 +34,9 @@ func init() {
 	db.SetMaxOpenConns(1)
 	db.Exec("PRAGMA journal_mode=WAL;")
 	// get reusable sql functions
-	dot, err := dotsql.LoadFromFile("tables.sql")
+	dot, err := dotsql.LoadFromFile("goaway2/tables.sql")
 	if err != nil {
-		log.Fatalln(err.Error())
+		log.Fatalf("Unable to load SQL: %s\n", err.Error())
 	}
 	// check if required tables exist
 	if !sqlCheckExists("rules") {

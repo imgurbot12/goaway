@@ -36,11 +36,15 @@ func NewFirewall() *Firewall {
 /***Methods***/
 
 //(*Firewall).HandlePackets : packet hander used to block/allow packets based on rules
-func (fw *Firewall) HandlePackets(kv *RBKV, pkt *PacketData) netfilter.Verdict {
+func (fw *Firewall) HandlePackets(l *log.Logger, kv *RBKV, pkt *PacketData) netfilter.Verdict {
 	switch {
 	// if src-ip is in blacklist cache
 	case fw.blacklist.Exists(kv, pkt.SrcIP):
-		log.Printf("Fast Block: %s\n", pkt.SrcIP)
+		l.Printf("Fast Block SRC: %s\n", pkt.SrcIP)
+		return netfilter.NF_DROP
+	// if dst-ip is in blacklist cache
+	case fw.blacklist.Exists(kv, pkt.DstIP):
+		l.Printf("Fast Block DST: %s\n", pkt.SrcIP)
 		return netfilter.NF_DROP
 	// if src-ip is in whitelist cache
 	case fw.whitelist.Exists(kv, pkt.SrcIP):
@@ -50,16 +54,23 @@ func (fw *Firewall) HandlePackets(kv *RBKV, pkt *PacketData) netfilter.Verdict {
 		return fw.checkRules(pkt)
 	// if src-ip is not in a cache
 	default:
-		var blocked int
-		db.QueryRow("SELECT EXISTS(SELECT 1 FROM blacklist WHERE LogicalDelete=0 AND IPAddress=?)", pkt.SrcIP).Scan(&blocked)
-		// if they are blocked, add to cache and drop packet
-		if blocked == 1 {
+		var blocked string
+		db.QueryRow("SELECT IPAddress FROM blacklist WHERE LogicalDelete=0 AND (IPAddress=? OR IPAddress=?)", pkt.SrcIP, pkt.DstIP).Scan(&blocked)
+		switch blocked {
+		case pkt.SrcIP:
+			// if source ip is blacklisted
 			fw.blacklist.Set(kv, pkt.SrcIP, "")
 			return netfilter.NF_DROP
+		case pkt.DstIP:
+			// if destination ip is blacklisted
+			fw.blacklist.Set(kv, pkt.DstIP, "")
+			return netfilter.NF_DROP
+		default:
+			// else put them in the neutral cache and evaluate the rules
+			fw.neutlist.Set(kv, pkt.SrcIP, "")
+			fw.neutlist.Set(kv, pkt.DstIP, "")
+			return fw.checkRules(pkt)
 		}
-		// else put them in the neutral cache and evaluate the rules
-		fw.neutlist.Set(kv, pkt.SrcIP, "")
-		return fw.checkRules(pkt)
 	}
 }
 
@@ -99,7 +110,7 @@ func (fw *Firewall) checkRules(pkt *PacketData) netfilter.Verdict {
 				} else {
 					continue
 				}
-			// if outbounds deafault is to deny
+			// if outbounds default is to deny
 			default:
 				// if rule matches: accept
 				if rule.Validate(pkt) {
