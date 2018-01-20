@@ -40,7 +40,7 @@ func (q *NetFilterQueue) start() {
 	if err != nil {
 		log.Fatalf("NFQueue %d Error: %s\n", q.QueueNum, err.Error())
 	}
-	log.Printf(`
+	q.Logger.Printf(`
 
    |\                     /)
  /\_\\__               (_//
@@ -59,8 +59,8 @@ func (q *NetFilterQueue) start() {
          |/         \\
 
 `)
-	log.Printf("NFQueue: %d, Initalized!", q.QueueNum)
-	log.Printf("Workers Starting... DONE!")
+	q.Logger.Printf("NFQueue: %d, Initalized!", q.QueueNum)
+	q.Logger.Printf("Workers Starting... DONE!")
 	// set packet queue and started boolean
 	q.pktQueue = q.nfq.GetPackets()
 	// spawn workerpool
