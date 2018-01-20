@@ -4,7 +4,7 @@ import "net"
 
 /***Variables***/
 
-//PacketData : packet data containg realvent data from gopacket
+//PacketData : packet data containing relevant data from gopacket
 type PacketData struct {
 	SrcIP    string
 	DstIP    string
