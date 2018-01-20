@@ -14,12 +14,7 @@ type PacketData struct {
 }
 
 //localIPs : a hashmap of local ip-addresses
-var localIPs map[string]struct{}
-
-/***Functions***/
-
-//getLocalIPs : return list of local ip-addresses
-func getLocalIPs() map[string]struct{} {
+var localIPs = func() map[string]struct{} {
 	// create binary tree for lookup
 	ips := make(map[string]struct{})
 	// get ip-addresses from interfaces
@@ -35,12 +30,7 @@ func getLocalIPs() map[string]struct{} {
 		}
 	}
 	return ips
-}
-
-func init() {
-	// get all local ip addreses
-	localIPs = getLocalIPs()
-}
+}()
 
 /***Methods***/
 
