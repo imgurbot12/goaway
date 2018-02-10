@@ -13,6 +13,8 @@ import (
 
 /***Variables***/
 
+//TODO: complete log unification, some dont use local logging instance and need to be changed
+
 type NetFilterQueue struct {
 	// Set Variables
 	Handler      func(*log.Logger, *RBKV, *PacketData) netfilter.Verdict
