@@ -1,0 +1,44 @@
+
+-- create whitelist
+BEGIN;
+CREATE TABLE IF NOT EXISTS whitelist (
+  IPAddress VARCHAR(39) NOT NULL,
+  EntryDate DATETIME NOT NULL,
+  Reason TEXT NOT NULL,
+  LogicalDelete TINYINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS whitelist_1 ON whitelist (LogicalDelete, IPAddress);
+COMMIT;
+
+-- create blacklist
+BEGIN;
+CREATE TABLE IF NOT EXISTS blacklist (
+  IPAddress VARCHAR(39) NOT NULL,
+  EntryDate DATETIME NOT NULL,
+  LastSeen DATETIME NOT NULL,
+  Reason TEXT NOT NULL,
+  LogicalDelete TINYINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS blacklist_1 ON blacklist (LogicalDelete, IPAddress);
+COMMIT;
+
+-- create rules
+BEGIN;
+CREATE TABLE IF NOT EXISTS rules (
+  RuleNum INT NOT NULL,
+  Zone TINYINT NOT NULL,
+  FromIP VARCHAR(39) NOT NULL,
+  FromPort TINYINT NOT NULL,
+  ToIP VARCHAR(39) NOT NULL,
+  ToPort TINYINT NOT NULL,
+  Reason TEXT
+);
+COMMIT;
+
+-- create rule defaults
+BEGIN;
+CREATE TABLE IF NOT EXISTS defaults (
+  Inbound TINYINT NOT NULL,
+  OutBound TINYINT NOT NULL
+);
+COMMIT;
