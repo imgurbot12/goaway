@@ -4,6 +4,7 @@ import (
 	"net"
 	"fmt"
 	"sync"
+
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket"
 )
@@ -48,13 +49,16 @@ type PortRange struct {
 	Tail uint16
 }
 
+//AnyIPAddress : match any sort of ip-address coming through network
 type AnyIPAddress struct {}
 
+//AnyPort : match any port coming through network
 type AnyPort struct {}
 
 //Rule : single firewall-rule used to validate if given
 // packet follows rules or not
 type Rule struct {
+	Name    string
 	Zone    Zone
 	SrcIP   StrValidator
 	SrcPort IntValidator
@@ -131,6 +135,15 @@ func (p *Packet) ParsePacket(pkt gopacket.Packet) {
 	}
 }
 
+//(*Packet).GetDirectionDefault : determine if packet direction is inbound or outbound
+// and return related default based on that direction
+func (p *Packet) GetDirectionDefault(inbound, outbound FWDefault) FWDefault {
+	if 	_, ok := localIPs[p.DstIP]; ok {
+		return inbound
+	}
+	return outbound
+}
+
 //(Zone).IsValid : return true if zone is valid integer for zone assignment
 func (z Zone) IsValid() bool {
 	return 0 < z && z < 3
@@ -143,10 +156,10 @@ func (z Zone) InZone(ip string) bool {
 		return true
 	case ZoneInbound:
 		_, ok := localIPs[ip]
-		return !ok
+		return ok
 	case ZoneOutbound:
 		_, ok := localIPs[ip]
-		return ok
+		return !ok
 	default:
 		panic(fmt.Sprintf("no such zone: %d", z))
 	}
@@ -159,14 +172,7 @@ func (addr IPAddress) IsValid() bool {
 
 //(IPAddress).Validate : return true if ip-string equals the given fw-address
 func (addr IPAddress) Validate(ip string) bool {
-	switch string(addr) {
-	case "any":
-		return true
-	case ip:
-		return true
-	default:
-		return true
-	}
+	return string(addr) == ip
 }
 
 //(IPRange).IsValid : ip-range has no need to be validated
@@ -179,9 +185,9 @@ func (ipr IPRange) Validate(ip string) bool {
 	return ipr.Contains(net.ParseIP(ip))
 }
 
-//(Port).Validate : unsigned int means this doesnt need to validated
+//(Port).Validate : unsigned int means this doesn't need to validated
 func (p Port) IsValid() bool {
-	return true
+	return 0 < p && p < 65525
 }
 
 //(Port).Validate : return true if port equals object's port
@@ -191,7 +197,7 @@ func (p Port) Validate(port uint16) bool {
 
 //(PortRange).IsValid : return true if head and tail are valid endpoints for port-range
 func (pr PortRange) IsValid() bool {
-	return pr.Head < pr.Tail && pr.Tail < 65525
+	return 0 < pr.Head && pr.Head < pr.Tail && pr.Tail < 65525
 }
 
 //(PortRange).Validate : return true if port is within port range
