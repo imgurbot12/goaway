@@ -4,6 +4,7 @@ import (
 	"log"
 	"github.com/AkihiroSuda/go-netfilter-queue"
 	"github.com/google/gopacket"
+	"fmt"
 )
 
 /* Variables */
@@ -25,19 +26,18 @@ type Firewall struct {
 	LogAllErrors bool
 	Logger *log.Logger
 	// firewall settings
-	Rules []*Rule
+	Logo string
+	LogAllRequests bool
+	Rules []Rule
 	DefaultInbound FWDefault
 	DefaultOutbound FWDefault
 	BlackList List
-	Whitelist List
+	WhiteList List
 	// loaded objects
 	nfq    *NetFilterQueue
 	wcache *Cache // cache for whitelisted ips
 	bcache *Cache // cache for blacklisted ips
 	ncache *Cache // cache for neutral or undetermined ips
-	// loaded functions
-	whitelistfunc func(*KeyValueCache, string) bool
-	blacklistfunc func(*KeyValueCache, string) bool
 }
 
 /* Methods */
@@ -46,11 +46,14 @@ type Firewall struct {
 // to given firewall rules and check if packet should be rejected or accepted
 func (fw *Firewall) checkRules(pkt *Packet) netfilter.Verdict {
 	for _, rule := range fw.Rules {
-		switch fw.DefaultInbound {
+		switch pkt.GetDirectionDefault(fw.DefaultInbound, fw.DefaultOutbound) {
 		case DefaultAllow:
 			// if rule matches: drop
 			if rule.Validate(pkt) {
-				return netfilter.NF_ACCEPT
+				fmt.Printf("pkt: %v\n", pkt)
+				fw.Logger.Printf("New Block: [%s:%d->%s:%d] on rule: %s",
+					pkt.SrcIP, pkt.SrcPort, pkt.DstIP, pkt.DstPort, rule.Name)
+				return netfilter.NF_DROP
 			}
 			continue
 		case DefaultDeny:
@@ -58,7 +61,11 @@ func (fw *Firewall) checkRules(pkt *Packet) netfilter.Verdict {
 			if rule.Validate(pkt) {
 				continue
 			}
+			fw.Logger.Printf("New Block: [%s:%d->%s:%d] on rule: %s",
+				pkt.SrcIP, pkt.SrcPort, pkt.DstIP, pkt.DstPort, rule.Name)
 			return netfilter.NF_DROP
+		default:
+			panic(fmt.Sprintf("invalid default given"))
 		}
 	}
 	return netfilter.NF_ACCEPT
@@ -69,42 +76,37 @@ func (fw *Firewall) checkRules(pkt *Packet) netfilter.Verdict {
 func (fw *Firewall) handle(kv *KeyValueCache, pkt *Packet) netfilter.Verdict {
 	switch {
 	// if src-ip in blacklist
-	case fw.blacklistfunc(kv, pkt.SrcIP):
+	case fw.bcache.Exists(kv, pkt.SrcIP):
 		fw.Logger.Printf("Fast Block SRC: %s\n", pkt.SrcIP)
 		return netfilter.NF_DROP
 	// if dst-ip in blacklist
-	case fw.blacklistfunc(kv, pkt.DstIP):
+	case fw.bcache.Exists(kv, pkt.DstIP):
 		fw.Logger.Printf("Fast Block DST: %s\n", pkt.DstIP)
 		return netfilter.NF_DROP
 	// if src-ip in whitelist
-	case fw.whitelistfunc(kv, pkt.SrcIP):
+	case fw.wcache.Exists(kv, pkt.SrcIP):
 		return netfilter.NF_ACCEPT
 	// if src-ip is in neutral cache
 	case fw.ncache.Exists(kv, pkt.SrcIP):
 		return fw.checkRules(pkt)
 	// if src-ip is not in a cache
 	default:
-		// check all of blacklist if not in memory
-		if !fw.BlackList.InMemory() {
-			switch {
-			// if source-ip is blacklisted
-			case fw.BlackList.Exists(pkt.SrcIP):
-				fw.bcache.Set(kv, pkt.SrcIP, "")
-				return netfilter.NF_DROP
-			// if destination-ip is blacklisted
-			case fw.BlackList.Exists(pkt.DstIP):
-				fw.bcache.Set(kv, pkt.SrcIP, "")
-				return netfilter.NF_DROP
-			}
+		// check if src/dst ips are in blacklist
+		if fw.BlackList.Exists(pkt.SrcIP) {
+			fw.bcache.Set(kv, pkt.SrcIP, "")
+			fw.Logger.Printf("Slow Block SRC: %s\n", pkt.SrcIP)
+			return netfilter.NF_DROP
 		}
-		// check all of whitelist if not in memory
-		if !fw.Whitelist.InMemory() {
-			// if src-ip is whitelisted
-			if fw.Whitelist.Exists(pkt.SrcIP) {
-				fw.wcache.Set(kv, pkt.SrcIP, "")
-				fw.ncache.Set(kv, pkt.DstIP, "")
-				return netfilter.NF_ACCEPT
-			}
+		if fw.BlackList.Exists(pkt.DstIP) {
+			fw.bcache.Set(kv, pkt.DstIP, "")
+			fw.Logger.Printf("Slow Block DST: %s\n", pkt.DstIP)
+			return netfilter.NF_DROP
+		}
+		// check if src ip is in whitelist
+		if fw.WhiteList.Exists(pkt.SrcIP) {
+			fw.wcache.Set(kv, pkt.SrcIP, "")
+			fw.ncache.Set(kv, pkt.DstIP, "")
+			return netfilter.NF_ACCEPT
 		}
 		// if neither ips are in blacklist/whitelist/neutral-cache
 		fw.ncache.Set(kv, pkt.SrcIP, "")
@@ -119,6 +121,9 @@ func (fw *Firewall) nfhandle(rawPkt gopacket.Packet) (netfilter.Verdict, error) 
 	var kv = GetKVCache()
 	var pkt = GetPacket()
 	pkt.ParsePacket(rawPkt)
+	if fw.LogAllRequests {
+		fw.Logger.Printf("PKT: %s:%d -> %s:%d\n", pkt.SrcIP, pkt.SrcPort, pkt.DstIP, pkt.DstPort)
+	}
 	// run handler
 	verdict := fw.handle(kv, pkt)
 	// return objects to pools before returning verdict
@@ -128,25 +133,28 @@ func (fw *Firewall) nfhandle(rawPkt gopacket.Packet) (netfilter.Verdict, error) 
 }
 
 //(*Firewall).Run : build and execute firewall instance
-func (fw *Firewall) Run() {
-	// build caches and load functions
+func (fw *Firewall) Run() error {
+	// build caches
 	fw.ncache = NewCache()
-	if !fw.Whitelist.InMemory() {
-		fw.wcache = NewCache()
-		fw.whitelistfunc = fw.wcache.Exists
-	} else {
-		fw.whitelistfunc = func(_ *KeyValueCache, ip string) bool {
-			return fw.Whitelist.Exists(ip)
+	fw.wcache = NewCache()
+	fw.bcache = NewCache()
+	// wrap list objects to update cache when they are updated in any form
+	fw.WhiteList = &listCacheWrapper{
+		list: fw.WhiteList,
+		cache: fw.wcache,
+	}
+	fw.BlackList = &listCacheWrapper{
+		list: fw.BlackList,
+		cache: fw.wcache,
+	}
+	// check if rules are valid
+	for i, rule := range fw.Rules {
+		if !rule.IsValid() {
+			return fmt.Errorf("invalid rule: %s[%d]", rule.Name, i)
 		}
 	}
-	if !fw.BlackList.InMemory() {
-		fw.bcache = NewCache()
-		fw.blacklistfunc = fw.bcache.Exists
-	} else {
-		fw.blacklistfunc = func(_ *KeyValueCache, ip string) bool {
-			return fw.BlackList.Exists(ip)
-		}
-	}
+	// print logo
+	fw.Logger.Println(fw.Logo)
 	// build netfilter-queue instance
 	fw.nfq = &NetFilterQueue{
 		Handler: fw.nfhandle,
@@ -154,5 +162,5 @@ func (fw *Firewall) Run() {
 		LogAllErrors: fw.LogAllErrors,
 		Logger: fw.Logger,
 	}
-	fw.nfq.Run()
+	return fw.nfq.Run()
 }
