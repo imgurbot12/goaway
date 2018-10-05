@@ -44,7 +44,7 @@ func getPortRule(port uint16) IntValidator {
 //(*Database).GetBlacklist : check if src/dst ip is blacklisted
 func (conn *Database) GetBlacklist(pkt *Packet, out *string) error {
 	return conn.db.QueryRow(
-		`SELECT IPAddress FROM blacklist WHERE LogicalDelete=0 AND (IPAddress=? OR IPAddress=?`,
+		`SELECT IPAddress FROM blacklist WHERE LogicalDelete=0 AND (IPAddress=? OR IPAddress=?)`,
 		pkt.SrcPort, pkt.DstPort).Scan(out)
 }
 
