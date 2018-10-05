@@ -124,7 +124,6 @@ func (wp *workerPool) Stop() {
 	// serving the connection and noticing wp.mustStop = true.
 	wp.lock.Lock()
 	ready := wp.ready
-	wp.Logger.Printf("DBUG: stopping all workers!")
 	for i, ch := range ready {
 		ch.ch <- netfilter.NFPacket{Packet: nil}
 		ready[i] = nil
@@ -175,7 +174,6 @@ func (wp *workerPool) clean(scratch *[]*workerChan) {
 	for i, ch := range tmp {
 		ch.ch <- netfilter.NFPacket{Packet: nil}
 		tmp[i] = nil
-		wp.Logger.Printf("DBUG: attempting to clean worker!")
 	}
 }
 
@@ -261,5 +259,4 @@ func (wp *workerPool) workerFunc(ch *workerChan) {
 	wp.lock.Lock()
 	wp.workersCount--
 	wp.lock.Unlock()
-	wp.Logger.Printf("DBUG: Worker Exited!")
 }
