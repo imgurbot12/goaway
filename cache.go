@@ -1,8 +1,8 @@
 package goaway3
 
 import (
-	"github.com/ocdogan/rbt"
 	"sync"
+	"github.com/ocdogan/rbt"
 )
 
 /* Variables */
