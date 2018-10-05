@@ -7,6 +7,8 @@ import (
 
 /* Variables */
 
+//todo: may want to move this file into an example folder as this supposed to be a customizable firewall
+
 //ruleRaw : basic struct used to extract values from database
 type ruleRaw struct {
 	Zone uint8

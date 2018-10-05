@@ -9,9 +9,11 @@ import (
 
 /* Variables */
 
-//TODO: need a way to add new ips to blacklist if they break any rules
+//TODO: need a way to add new ips to blacklist if they break any rules +enhancement
 //TODO: do we want to implement reject via nfqueue with custom ICMP response? +enhancement
-//TODO: need some sort of memory management or expiration on quick lookups for both whitelist and blacklist members +enhancement
+//TODO: need some sort of memory management or expiration on all caches to ensure they dont bloat the program +enhancement
+//TODO: add start / stop / run-forever functionality rather than just run to add versatility
+//TODO: need to add benchmark testing to determine upload/download speeds before and after firewall is active to determine impact +enhancement
 
 //FWDefault : default enum for all possible firewall configs for default connection handling
 type FWDefault uint8
@@ -50,7 +52,6 @@ func (fw *Firewall) checkRules(pkt *Packet) netfilter.Verdict {
 		case DefaultAllow:
 			// if rule matches: drop
 			if rule.Validate(pkt) {
-				fmt.Printf("pkt: %v\n", pkt)
 				fw.Logger.Printf("New Block: [%s:%d->%s:%d] on rule: %s",
 					pkt.SrcIP, pkt.SrcPort, pkt.DstIP, pkt.DstPort, rule.Name)
 				return netfilter.NF_DROP
