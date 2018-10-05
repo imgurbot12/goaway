@@ -61,24 +61,29 @@ func (q *NetFilterQueue) stop() error {
 	if q.wp == nil {
 		return fmt.Errorf("queue: %d never started", q.QueueNum)
 	}
-	q.nfq.Close()
 	q.wp.Stop()
+	q.nfq.Close()
 	q.pktQ = nil
 	q.wp = nil
 	return nil
 }
 
 //(*NetFilterQueue).Run : run nfq indefinably and block until interrupt
-func (q *NetFilterQueue) Run() {
+func (q *NetFilterQueue) Run() error {
 	// start NetFilter-Queue instance
-	q.start()
+	if err := q.start(); err != nil {
+		return err
+	}
 	// handle interrupts
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		for sig := range c {
-			q.Logger.Fatalf("Captured Signal: %s! Cleaning up...", sig.String())
-			q.stop()
+			q.Logger.Printf("Captured Signal: %s! Cleaning up...", sig.String())
+			if err := q.stop(); err != nil {
+				q.Logger.Printf("Netfilter-Queue-Stop Err: %s\n", err.Error())
+			}
+			os.Exit(1)
 		}
 	}()
 	// handle incoming packets
