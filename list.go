@@ -29,6 +29,25 @@ type DatabaseList struct {
 	db *sql.DB
 }
 
+//listCacheWrapper : wrapper used to wrap a list object with a cache
+// so if the list is updated in any form the cache is also updated
+// with some added latency as the key/value cache may not be reused
+type listCacheWrapper struct {
+	list  List
+	cache *Cache
+}
+
+/* Functions */
+
+//NewInMemoryList : spawn memory list instance with given ips already in the list
+func NewInMemoryList(ips []string) *InMemoryList {
+	ml := new(InMemoryList)
+	for _, ip := range ips {
+		ml.Add(ip)
+	}
+	return ml
+}
+
 /* Methods */
 
 //(*InMemoryList).Add : add value to sync.Map
@@ -73,6 +92,32 @@ func (dl *DatabaseList) Remove(ip string) {
 // relies on a sql-database rather than direct in memory storage
 func (dl *DatabaseList) InMemory() bool {
 	return false
+}
+
+//(*listCacheWrapper).Add : adds ip to the list while also adding record to cache
+func (lcw *listCacheWrapper) Add(ip string) {
+	kv := GetKVCache()
+	lcw.list.Add(ip)
+	lcw.cache.Set(kv, ip, "")
+	PutKVCache(kv)
+}
+
+//(*listCacheWrapper).Exists : Exists function is left unmodified
+func (lcw *listCacheWrapper) Exists(ip string) bool {
+	return lcw.list.Exists(ip)
+}
+
+//(*listCacheWrapper).Remove : removes ip from both list and cache instance
+func (lcw *listCacheWrapper) Remove(ip string) {
+	kv := GetKVCache()
+	lcw.list.Remove(ip)
+	lcw.cache.Delete(kv, ip)
+	PutKVCache(kv)
+}
+
+//(*listCacheWrapper).InMemory : inMemory function is left unmodified
+func (lcw *listCacheWrapper) InMemory() bool {
+	return lcw.list.InMemory()
 }
 
 
